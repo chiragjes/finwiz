@@ -1,4 +1,6 @@
-# LSTMs 2: Layers, Vanishing Gradients and Hyperparameters
+---
+title: LSTMs 2 - Layers, Vanishing Gradients and Hyperparameters
+---
 
 ## Introduction
 This notebook would introduce you to the process of feature selection and modelling multiple variables with the help of LSTMs. We also start off with a different model called Gated Recurrent Units or GRU in short.
