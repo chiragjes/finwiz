@@ -12,9 +12,56 @@ We will also cover the syntax and the details about defining a model in this not
 ### Setting Up
 As usual, the cell below imports all the libraries and defines the parameters that we will be using to create these models.
 
+```python
+## Import Libraries and set information
+from pandas_datareader import data as pdr
+from datetime import date
+
+import sys
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from numpy import array
+import math
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow import keras
+from keras.models import Model
+from keras.layers import Input, Dense, GRU, Dropout, concatenate, LSTM
+from keras.optimizers import Adam
+from keras.utils import plot_model
+import yfinance as yf
+
+from sklearn.model_selection import train_test_split
+yf.pdr_override()
+
+# Get Current Date
+today = date.today()
+currentDate = today.strftime("%Y-%m-%d")
+
+# Set Info
+start_date = '2015-01-01'
+end_date = currentDate
+stockName = ['AVGO', 'GOOG', 'MSFT', 'META', 'AAPL', 'NVDA']
+
+#importing a csv file with list of stock symbols
+comp_df = pd.read_csv("https://gist.github.com/chiragjes/d37f7f90446dfa3fe884634ee98562cd/raw/0754981ac6c2a89c6af71d51d76ccb13a97214ae/market_cap_lst.csv")
+
+#comp_df.drop(comp_df[comp_df['Symbol'] == 'GOOGL'].index, inplace = True)
+comp_df.sort_values(by=['marketcap'], inplace=True, ascending=False)
+
+comp_df.head(16)
+```
 The table above shows the 15 most valuable companies in the US (according to market capitalization). We will check how their prioces are correlated with each other to make our models.
 
 We are using the largest companies since their scripts are less likely to go through extreme fluctuations and have very high liquidity. The largest stocks also tend to reflect the overall sentiment of the market and therefore are more likely to fluctuate in similar directions, which makes them a good candidate for data that can be used to predict a particular stock.
+
+stockNames = comp_df['Symbol'].head(15).tolist()
+data_df = pd.DataFrame({})
+for i in range(len(stockNames)):
+    all_data = pdr.get_data_yahoo(stockNames[i], start=start_date, end=end_date)
+    data_df[stockNames[i]] = all_data['Adj Close']
+print(data_df.head())
 
 ## Correlation Matrix
 This matrix represents the correlation between the top 20 most valuable companies on NASDAQ. You can see their symbols on the axes. It is useful to map out the correlations between different stocks to find the scripts that move together.
@@ -25,6 +72,14 @@ In this lesson, we will predict the price of a particular stock by combining the
 
 In the previous lesson, we had seen how the parameters for the models were seemingly chosen randomly. In this lesson, we will explore what algorithms can be used to choose the best possible model.
 
+```python
+import seaborn as sns
+#Create a correlation matrix with all the columns of data_df
+corr_matrix = data_df.corr()
+plt.figure(figsize=(12, 12))
+#plot the correlation matrix
+sns.heatmap(corr_matrix, annot=True)
+```
 ## Multivariate Models
 In the previous notebook, we were working on forecasting future stock prices with the help of past prices. We did not model anything else and made it exclusively about one stock. We had mentioned how we can use other variables to make our model better. In a regression analysis, one might add more predictors into the model to make it fit better.
 
@@ -49,12 +104,53 @@ The first few steps like loading the price data from the yfinance API, filtering
 Side Note: A dictionary is a data structure in python which consists of key:value pairs.
 
 By using a dictionary, we can clearly see the stock names connected with their prices directly. In a list, we would have only seen the prices.
+```python
+price_dict = {}
+```
+
+```python
+for i in range(len(stockName)):
+  df_stock = data_df.copy()
+  df_stock = df_stock.filter([stockName[i]], axis =1)
+  price_dict[stockName[i]] = np.array(df_stock.values).flatten()
+
+print(price_dict)
+```
 
 ### Normalization Of Data
 
 In the previous notebook, we saw how normalizing the data is an important step in the data pre-processing pipeline since it helps in standardizing all the values by condensing them between 0 and 1. We perform the same process here except this time we have created a function the normalizes the data, saves the scaler and reshapes the data according to our requirements.
 
 Instead of doing this process manually every time, a helper function essentially abstracts away that process making your code more understandable and modular. This notebook extensively utilizes this approach during the preprocessing step.
+
+```python
+scaler_dict = {}
+
+from sklearn.preprocessing import MinMaxScaler
+
+def normalize_data(data, name):
+    """
+    Normalize the given data using Min-Max scaling.
+
+    Parameters:
+    data (numpy.ndarray): The data to be normalized.
+    name (str): The name of the scaler.
+
+    Returns:
+    numpy.ndarray: The normalized data.
+
+    """
+    # Create a MinMaxScaler object with a feature range of (0, 1)
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    # Reshape the data to have a single feature column
+    data = data.reshape(-1, 1)
+    # Normalize the data using the scaler
+    normalized_data = scaler.fit_transform(data)
+    # Store the scaler object in a dictionary with the given name as the key
+    scaler_dict[name] = scaler
+    # Return the normalized data
+    return normalized_data
+```
 
 ### Why did we use different scalers?
 
@@ -66,27 +162,73 @@ We did not have to consider this when we were working with only one time series.
 
 Saving these scaler objects for inverse transformation is crucial because, after making predictions, we often want to convert scaled predictions back to their original scale to interpret results accurately.  Without the original scaler objects, the inverse transformation could be incorrect, leading to misinterpretation of the model's output and potentially costly mistakes in financial decision-making.
 
+```python
+normalized_stocks = {}
+normalized_stocks_lst = []
+
+for stock_name, stock_prices in price_dict.items():
+    normalized_stocks[stock_name] = normalize_data(stock_prices, stock_name)
+    normalized_stocks_lst.append(normalized_stocks[stock_name])
+```
+
 #### Combining Stock Prices
 
+```python
+norm_concat = np.column_stack(tuple(normalized_stocks_lst))
+print(norm_concat[0:5, :])
+```
 
+```python
+print(norm_concat.shape)
+```
 ## Training Testing Split
 
+```python
+def training_data_x(data, window_size):
+    """
+    Create a new array containing windows of the given data.
+    """
+    # Calculate the number of windows that can fit in the data
+    num_windows = len(data) - window_size
+    # Create an empty array to store the windows
+    new_array = np.empty((num_windows, window_size, data.shape[1]))
+    # Loop through the data and create the windows
+    for i in range(num_windows):
+        # Add a window to the output array
+        new_array[i, :, :] = data[i:i + window_size, :]
+    return new_array
 
-
+def training_data_y(data, window_size):
+    return data[window_size:].reshape(-1,1)
+```
 
 The y value that we are trying to predict is microsoft. It is shaped differently compared to the x-values which have all the stock prices from our entire sample. We need to filter the microsoft stock prices and that's what we are doing here:
+```python
+norm_msft = norm_concat[:, 2]
+```
 
 norm_concat, as you saw before, has all the data for all the stocks. We can pass that directly to train_test_split module from the sklearn library. It would automatically split the data according to the ratio that we decide (0.2 in this case).
 
 This function shuffles the data across training and testing sets by default. However, that would not be appropriate for our model since we need to make sure that sequence does not get inturrpted. More importantly, shuffling might introduce future data when then model is iterating through the past. This could give it hints about the structures that lie ahead and predict correctly without learning the underlying market movement.
 
+```python
+X_train, X_test, y_train, y_test = train_test_split(training_data_x(norm_concat, 15), training_data_y(norm_msft, 15), test_size=0.2, shuffle=False)
+print(X_train.shape, y_train.shape, X_test.shape, y_test.shape)
+```
 
+```python
+print(X_train[1:2, :, 0], y_train[0])
+```
 
 The two-dimensional array shown is a typical format used in time series forecasting models like LSTM in machine learning. This particular array is a single row (or time step) with fifteen features extracted from two different stocks' historical data. The values are normalized to be between 0 and 1to ensure uniform scale across different stocks and features.
 
 The way these inputs are combined can vary based on the design of the model. Typically, for each day (that is the time step we choose here), data from the two stocks (e.g., their prices, volume, and other indicators) are processed to extract relevant features. These features are then concatenated into a single array, representing the combined state of these stocks at that particular time step. This array becomes the input for the LSTM model to predict the future price or movement of one targeted stock, indicated by [0.0065932] as the output (or target) for the next time step.
 
 In this particular example, the features could be various measurements or derived statistical values from both stocks that the model considers important in predicting the future behavior of the targeted stock. The LSTM model would then use sequences of these arrays (spanning several days or time steps) to learn patterns and relationships between the features and the future stock prices.
+
+```python
+print(X_train.shape)
+```
 
 ### LSTM Model 1
 We will be using a simple one layer LSTM model in the beginning to fit the data and check how it performs. In the previous notebooks, we glossed over how designing a model and adding its hyperparameters works. This section uses a simple model to explain the role played by those values in determining the fit and performance of our model.
@@ -102,7 +244,18 @@ In all the models so far, we have been using Adam Optimizer.
 
 Sources: https://ml-cheatsheet.readthedocs.io/en/latest/optimizers.html
 
+```python
+def model1():
+    input_concat = Input(shape=(X_train.shape[1], X_train.shape[2]), name='input_concat')
+    x1 = LSTM(256, name='LSTM1_concat')(input_concat)
+    output1 = Dense(1, name='msft_final')(x1)
+    model1 = Model(inputs=input_concat, outputs=output1)
+    adam = Adam(learning_rate=0.005)
+    model1.compile(optimizer=adam, loss='mean_squared_error', metrics=['mae', 'mse'])
+    return model1
 
+model1 = model1()
+```
 
 ### Baseline Model
 This is the baseline model that we will use to judge the performance of all the other LSTMs. It is a basic one-layer model similar to the ones that we had in previous notebooks. This model has 256 neurons in one-layer.
@@ -153,6 +306,44 @@ If we were to look at the model below, the batch size is 32, epochs are 50 and t
 
 This implies, there are 32 samples being passed to the neural network in one iteration. To check how many times this happens, take a look at the output of the cell below. The number on the left of the loading bar represents the number of iterations that the model went through.
 
+```python
+# Fitting Model
+history = model1.fit(x=X_train, y=y_train, batch_size=32, epochs=50, validation_split=0.2, shuffle = False)
+evaluation = model1.evaluate(X_test, y_test)
+print(evaluation)
+```
+```python
+# Make plots to visualze loss and val_loss from evaluation
+plt.plot(history.history['loss'], label='loss')
+plt.plot(history.history['val_loss'], label='val_loss')
+plt.legend()
+plt.show()
+```
+```python
+## Make Predictions
+y_pred = model1.predict(X_test)
+y_pred = scaler_dict['MSFT'].inverse_transform(y_pred)
+
+## Use seaborn to plot everything in this code cell
+import seaborn as sns
+sns.set()
+plt.figure(figsize=(16, 10))
+plt.plot(scaler_dict['MSFT'].inverse_transform(y_test), label='True')
+plt.plot(y_pred, label='Prediction')
+plt.legend()
+```
+
+```python
+## Make the model predict the training set to see how well it fits the data
+y_pred_train = model1.predict(X_train)
+y_pred_train = scaler_dict['MSFT'].inverse_transform(y_pred_train)
+## Plotting the Predictions
+plt.plot(scaler_dict['MSFT'].inverse_transform(y_train), label='True')
+plt.plot(y_pred_train, label='Prediction')
+plt.legend()
+plt.show()
+```
+
 ### Adding more Predictors
 In the previous model, we used the close price of 6 stocks to construct our predictions. What will happpen when we take more data about these stocks into account? There are two possibilities that lie ahead of us:
 
@@ -160,6 +351,26 @@ In the previous model, we used the close price of 6 stocks to construct our pred
 2. Noise: More data also means more noise for the model to sort through. It is possible that our model "gets distracted" with minute fluctuations, and fails to capture patterns that are being repeated. This would show up as an increase in loss and val_loss.
 
 We will be adding more OHLC data about all the stocks in the next model.
+
+```python
+stockName = ['AVGO', 'GOOG', 'MSFT', 'META', 'AAPL', 'NVDA']
+
+# Create an empty data frame
+all_data = pd.DataFrame()
+
+# Iterate over the stock names and fetch data from Yahoo Finance
+for stock in stockName:
+    stock_data = pdr.get_data_yahoo(stock, start=start_date, end=end_date)
+    all_data = pd.concat([all_data, stock_data], axis=1)
+
+```
+
+```python
+#Adding all the OHCL data in one dataframe with multi-level columns
+all_data.columns = pd.MultiIndex.from_product([stockName, ['Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume']])
+# Remove the volume and adjusted close columns from the dataframe
+all_data = all_data.drop(['Volume', 'Adj Close'], axis=1, level=1)
+```
 
 #### Close Price vs OHLC
 The overall stock price movement captured only through the close price provides a snapshot of the stock's final trading value at the end of the trading day. This single data point represents the last transaction that occurred before the market closed, which can be useful for analyzing the stock's performance day-over-day. We used this figure to assess the daily net change in a stock's price, which is key in evaluating its longer-term trends and stability.
@@ -172,6 +383,40 @@ On the other hand, capturing stock price movement throughout the day involves an
 - Close Price: As mentioned, this is the last price at which the stock trades before the market closes.
 By examining all these aspects, investors can gain insights into the intraday strength or weakness of the stock, which could be triggered by market news, investor sentiment, or external economic events. This detailed breakdown helps traders and investors make more informed decisions, especially for those who engage in intraday or technical trading. It also helps in understanding how external factors or market news impact stock prices within the same trading session.
 
+```python
+all_data.head()
+```
+
+```python
+def normalize_data(data, stock_names):
+    normalized_stocks = {}
+    scaler_dict = {}
+
+    for stock_name in stock_names:
+        stock_data = data[stock_name]
+
+        for column_name in stock_data.columns:
+            column_data = stock_data[column_name]
+            scaler = MinMaxScaler()
+            normalized_column = scaler.fit_transform(column_data.values.reshape(-1, 1))
+
+            normalized_stocks[f"{stock_name}_{column_name}"] = normalized_column
+            scaler_dict[f"{stock_name}_{column_name}"] = scaler
+
+    return normalized_stocks, scaler_dict
+```
+
+```python
+ohcl_stocks, ohcl_scaler_dict = normalize_data(all_data, stockName)
+ohcl_stocks_values = list(ohcl_stocks.values())
+ohcl_norm_concat = np.column_stack(tuple(ohcl_stocks_values))
+index_number = list(ohcl_stocks.keys()).index('MSFT_Close')
+ohcl_norm_msft = ohcl_norm_concat[:, index_number]
+
+ohcl_X_train, ohcl_X_test, ohcl_y_train, ohcl_y_test = train_test_split(training_data_x(ohcl_norm_concat, 15), training_data_y(ohcl_norm_msft, 15), test_size=0.2, shuffle=False)
+
+print(ohcl_X_train.shape, ohcl_y_train.shape, ohcl_X_test.shape, ohcl_y_test.shape)
+```
 
 
 #### Shape of Arrays
@@ -184,13 +429,48 @@ Take a look at (1851, 15, 24) shape of the X_train series. 1851 and 15 are the s
 
 This model is the same as the previous one. Training data is the only difference here.
 
+```python
+def model3():
+    input_concat = Input(shape=(ohcl_X_train.shape[1], ohcl_X_train.shape[2]), name='input_concat')
+    x1 = LSTM(256, name='LSTM1_concat')(input_concat)
+    output1 = Dense(1, name='msft_final')(x1)
+    model1 = Model(inputs=input_concat, outputs=output1)
+    adam = Adam(learning_rate=0.001)
+    model1.compile(optimizer=adam, loss='mean_squared_error', metrics=['mae', 'mse'])
+    return model1
+model3 = model3()
+```
+
+```python
+history1 = model3.fit(x=ohcl_X_train, y=ohcl_y_train, batch_size=32, epochs=50, validation_split=0.2, shuffle = False)
+evaluation1 = model3.evaluate(ohcl_X_test, ohcl_y_test)
+print(evaluation1)
+```
+
 
 
 ### Results
 
 This model's validation loss metrics are slightly higher than the previous model, suggesting the possibility of overfitting.
 
+```python
+plt.plot(history1.history['loss'], label='loss')
+plt.plot(history1.history['val_loss'], label='val_loss')
+plt.legend()
+plt.show()
+```
 
+```python
+## Make Predictions
+y_pred2 = model3.predict(ohcl_X_test)
+y_pred2 = ohcl_scaler_dict['MSFT_Close'].inverse_transform(y_pred2)
+import seaborn as sns
+sns.set()
+plt.figure(figsize=(16, 10))
+plt.plot(ohcl_scaler_dict['MSFT_Close'].inverse_transform(ohcl_y_test), label='True')
+plt.plot(y_pred2, label='Prediction')
+plt.legend()
+```
 
 ### Results (contd.)
 Actual difference between both the models is apparent in the second graph where we see how far apart its predictions are. The testing predictions of the model were unable to grapple with the sudden price movement in the Microsoft stock. It is possible that adding this much training data would have made the model lose track of this stock.
