@@ -1,4 +1,6 @@
-# Notebook 1: Introduction to Financial Time Series Prediction with LSTMs
+---
+title: Notebook 1 - Introduction to Financial Time Series Prediction with LSTMs
+---
 
 # Introduction
 This workbook will help you understand how to create a simple machine learning model to predict stock prices. The learning objectives are:
