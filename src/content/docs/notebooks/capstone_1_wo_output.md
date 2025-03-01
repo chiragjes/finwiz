@@ -1,14 +1,50 @@
 ---
-title: Notebook 1 - Introduction to Financial Time Series Prediction with LSTMs
+title: Notebook 1 - Introduction to Financial Time Series Prediction with LSTMs (test)
 ---
 
-## Introduction
+# Introduction
 This workbook will help you understand how to create a simple machine learning model to predict stock prices. The learning objectives are:
 1. Data Preprocessing: Understanding why preprocessing data is important and how we can use python to simplify it.
-2. LSTM models: Learning about the architecture and calculations performed in a LSTM model and how it is suitable for stock market price prediction.
+2. LSTM models: Learning about the architecture and caulculations performed in a LSTM model and how it is suitable for stock market price prediction.
 3. Model Performance: Differentiating when a model is performing as intended and learning about underfitting or overfitting.
 
-### Setting Up
+
+```python
+
+## Import Libraries and set information
+from pandas_datareader import data as pdr
+from datetime import date
+
+import sys
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from numpy import array
+import math
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow import keras
+from keras.models import Model
+from keras.layers import Input, Dense, LSTM, GRU, Dropout, concatenate
+from keras.optimizers import Adam
+from keras.backend import square, mean
+from keras.utils import plot_model
+import yfinance as yf
+
+yf.pdr_override()
+
+# Get Current Date
+today = date.today()
+currentDate = today.strftime("%Y-%m-%d")
+
+# Set Info
+start_date = '2015-01-01'
+end_date = currentDate
+stockName = ['AMZN']
+import seaborn as sns
+```
+
+## Setting Up
 
 The code below imports all the necessary libraries from relevant packages. We will be using Yahoo Finance's API to collect stock price data.
 
@@ -19,6 +55,39 @@ The input data chosen here will determine what our model is trained on. By selec
 2. Fundamental Indicators: These include metrics such as profit, EBITDA, and book value related to a specific company. A model can approximate how changes in these values translate to changes in stock prices. This approach closely mirrors the real world and is a viable extension to this project.
 3. News and Sentiment Data: Researchers and investors have used commentary by retail investors on open forums like Twitter (now X) and Reddit, or news articles, to perform sentiment analysis and see how that could affect stock prices. Predicting text data with LSTMs can be challenging, as these are primarily designed for time-series data. However, if you can figure out how to perform feature engineering, you might build a model with higher accuracy.
 
+
+```python
+# Data AMZN
+stock_amzn = pdr.get_data_yahoo(stockName[0], start_date, end_date)
+```
+
+
+```python
+stock_amzn.head()
+```
+
+
+```python
+import plotly.express as px
+
+fig = px.line(stock_amzn, y = 'Close')
+fig.update_xaxes(rangeslider_visible=True)
+fig.update_layout(title_text='Amazon Close Price')
+fig.show()
+```
+
+
+```python
+df_amzn = stock_amzn
+df_amzn = df_amzn.filter(['Close'])
+dataset_amzn = df_amzn.values
+```
+
+
+```python
+df_amzn.head()
+```
+
 ## How does a typical ML model work?
 The first step before we dive deep into LSTMs, we need to underestand how a typical machine learning model pipeline works. There are three main elements of a machine learning pipeline:
 1. Data Preprocessing and Feature Engineering
@@ -28,7 +97,7 @@ Finally, after doing all of that, you can generate Predictions and compare that 
 
 These steps can be further broken down into specific components as we go through the workbook today. You need to focus on the importance of each step in the entire model, and what modelling decisions you end up making intutively by choosing one thing over the other.
 
-## Example 1: Are the numbers too big?
+# Example 1: Are the numbers too big?
 
 
 
@@ -39,6 +108,20 @@ In this case, The LSTM looks at a small section of all our stock prices, say 15 
 It is important to note that in case of univariate data (what we have here), we are solely considering the past prices of a stock to predict its value in the future.
 
 
+
+
+```python
+# Storing the number of data points in the array
+num_data_amzn = len(dataset_amzn)
+num_days_used = 15
+data_used_amzn = np.array([dataset_amzn[i : i + num_days_used].copy() for i in range(num_data_amzn - num_days_used)])
+data_to_predict_amzn = np.array(dataset_amzn[num_days_used:, :1])
+
+# Creating a dates array for the dates that were used by data_used
+dates_used_amzn = stock_amzn.index[num_days_used:num_data_amzn]
+
+display(data_used_amzn.shape,data_to_predict_amzn.shape, dates_used_amzn.shape)
+```
 
 ### Line by Line Breakdown
 
@@ -58,7 +141,40 @@ Setting Up Prediction Data:
 
 
 
-### Training and Testing Sets
+
+```python
+
+train_split = 0.8
+#Finding data size with the help of the shape of the dataframe
+data_size = data_used_amzn.shape[0]
+num_features_amzn = data_used_amzn.shape[2]
+train_size_amzn = int(data_size * train_split)
+test_size_amzn = data_size - train_size_amzn
+#Splitting data into test and train data
+
+#Based on the proportion of training data, we use everything from beginning until the testing point.
+X_train_amzn = data_used_amzn[0:train_size_amzn, :, :]
+
+#These are all the actual values of the stock prices for the training data
+y_train_amzn = data_to_predict_amzn[0:train_size_amzn, :]
+
+#We use the dates array to store the dates for the training data
+dates_train_amzn = dates_used_amzn[0:train_size_amzn]
+
+#we use everything from the training point until the end for testing
+X_test_amzn = data_used_amzn[train_size_amzn:, :, :]
+y_test_amzn = data_to_predict_amzn[train_size_amzn:, :]
+dates_test_amzn = dates_used_amzn[train_size_amzn:]
+
+#Since we can't apply a scaler on a dataframe, we would need to use numpy arrays
+#we are also slicing them based on training and testing
+unscaled_y_train_amzn = df_amzn['Close'].to_numpy()[(num_days_used):][0:train_size_amzn]
+unscaled_y_test_amzn = df_amzn['Close'].to_numpy()[(num_days_used):][train_size_amzn:]
+
+display("X_train shape:", X_train_amzn.shape, "X_test shape:", X_test_amzn.shape, "y_train shape:", y_train_amzn.shape, "y_test shape:", y_test_amzn.shape)
+```
+
+## Training and Testing Sets
 
 In most supervised machine learning models we split the dataset into training and testing sets. The purpose of this division is to evaluate the model’s performance on unseen data, ensuring it can generalize well beyond the specific examples it was trained on.
 
@@ -101,7 +217,50 @@ The final gate in the LSTM unit is the output gate. Its role is to determine the
 
 
 
+
+```python
+# Creating Model 1
+input_amzn = Input(shape=(15, 1), name = 'input_amzn')
+x1 = LSTM(160, return_sequences=False, name='LSTM1_amzn')(input_amzn)
+output1 = Dense(1, name='amzn_final')(x1)
+model1 = Model(inputs = input_amzn, outputs = output1)
+adam = Adam(learning_rate=0.005)
+model1.compile(optimizer=adam, loss='mse')
+model1.summary()
+```
+
 In the cell above, we have declared a very simple 160 neuron LSTM model. We will learn more about the syntax specifically later on.
+
+
+```python
+#Visualize the model
+plot_model(model1, to_file='model3.png', show_shapes=True, show_layer_names=True)
+```
+
+
+```python
+history = model1.fit(x=X_train_amzn, y=y_train_amzn, batch_size=32, epochs=40, validation_split=0.2, shuffle=False)
+evaluation = model1.evaluate(X_test_amzn,y_test_amzn)
+print(evaluation)
+```
+
+
+```python
+y_train_amzn_pred = model1.predict(X_train_amzn)
+y_test_amzn_pred = model1.predict(X_test_amzn)
+```
+
+
+```python
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+epochs = range(1, len(loss) + 1)
+plt.plot(epochs, loss, 'b', label='Training loss')
+plt.plot(epochs, val_loss, 'r', label='Validation loss')
+plt.title('Training and Validation loss')
+plt.legend()
+plt.show()
+```
 
 This graph, which shows the training and validation loss is key in evaluating the model's performance.
 Let's begin with understanding what training and validation loss are, and what they represent.
@@ -120,6 +279,30 @@ We can see that the training loss is fairly high at approximately 1000 units, wh
 
 The validation loss is much higher at 6000 units. This is extremely problematic because this implies the model is struggling to apply the information it has learned to the new context. Or, has it even learned anything? You can try answering that question by looking at the next graph.
 
+
+```python
+# Prediction data test
+plt.gcf().set_size_inches(16, 10, forward=True)
+
+
+real = plt.plot(dates_used_amzn, dataset_amzn[15:, :], label='real')
+trained = plt.plot(dates_train_amzn, y_train_amzn_pred[:, :], label='trained')
+pred = plt.plot(dates_test_amzn, y_test_amzn_pred[:, :], label='predicted')
+
+#plt.legend(['real amzn','real googl','real bll','real qcom','predict amzn','predic googl','predict bll','predict qcom'])
+plt.xlabel('Days being predicted (units are arbitrary)', fontsize=20)
+plt.ylabel('Price (USD)', fontsize=20)
+plt.title('Real and Predicted Close Price on the Test Set', fontsize=30)
+
+plt.show()
+```
+
+
+```python
+print("Mean Absolute Error:", mean_absolute_error(y_test_amzn, y_test_amzn_pred))
+print("Mean Squared Error:", mean_squared_error(y_test_amzn, y_test_amzn_pred))
+```
+
 ### Results
 In the graph above, you can see the training predictions in orange, the model's training predictions in green. It is clearly evident that the the model loses track of the entire process at some point. The straight lines parallel to the x-axis indicates the inability to capture any variations in the price movements. The model essentially output the same number as its prediction since it could not fit the values that were passed in x-train beyond that point.
 
@@ -129,6 +312,12 @@ In the graph above, you can see the training predictions in orange, the model's 
 Now, why could this happen? Is it because our model is too simple perhaps or could it have something to do with how we processed our inputs?
 
 Let's think about the inputs theory. The prices changed quickly after 2018, the model was still able to capture a lot of these fluctuations but it completely loses track when the prices soar rapidly in 2020. There is a possibility that this sudden change in training data might have made it difficult for the model to relate it to the past data it had been trained on.
+
+
+```python
+normalizer = MinMaxScaler(feature_range=(0,1)) # instantiate scaler
+normalized_amzn = normalizer.fit_transform(dataset_amzn) # values between 0,1
+```
 
 # Example 2: A fixed Model
 So, in order to see how this model performs when we rescale the inputs, we perform normalization with min max scaler.
@@ -146,9 +335,81 @@ Normalizing the prices means a model won't be unduly influenced by the scale of 
 
 We will see as we move ahead how true this statement is.
 
+
+```python
+
+data_used_amzn = np.array([normalized_amzn[i : i + num_days_used].copy() for i in range(num_data_amzn - num_days_used)])
+data_to_predict_amzn = np.array(normalized_amzn[num_days_used:, :1])
+
+#Based on the proportion of training data, we use everything from beginning until the testing point.
+X_train_amzn = data_used_amzn[0:train_size_amzn, :, :]
+
+#These are all the actual values of the stock prices for the training data
+y_train_amzn = data_to_predict_amzn[0:train_size_amzn, :]
+
+#we use everything from the training point until the end for testing
+X_test_amzn = data_used_amzn[train_size_amzn:, :, :]
+y_test_amzn = data_to_predict_amzn[train_size_amzn:, :]
+
+display("X_train shape:", X_train_amzn.shape, "X_test shape:", X_test_amzn.shape, "y_train shape:", y_train_amzn.shape, "y_test shape:", y_test_amzn.shape)
+```
+
+
+```python
+history = model1.fit(x=X_train_amzn, y=y_train_amzn, batch_size=32, epochs=40, validation_split=0.2)
+evaluation = model1.evaluate(X_test_amzn,y_test_amzn)
+```
+
+
+```python
+y_train_amzn_pred = model1.predict(X_train_amzn)
+y_test_amzn_pred = model1.predict(X_test_amzn)
+```
+
+
+```python
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+epochs = range(1, len(loss) + 1)
+plt.plot(epochs[1:], loss[1:], 'b', label='Training loss')
+plt.plot(epochs[1:], val_loss[1:], 'r', label='Validation loss')
+plt.title('Training and Validation loss')
+plt.legend()
+plt.show()
+```
+
 In the previous cell, we did not change the specification of the model, or the parameters for fitting it. The only difference was standardizing the inputs with the help of min-max alogorithms. As you can clearly see how the training and validation loss has improved drastically by this change.
 
 Not only is the loss much lower than before, we can also see how the gap between both of them has narrowed down. This implies our model was actually able to generalize what it learned from its training data to the validation dataset.
+
+
+```python
+mae_norm = mean_absolute_error(y_test_amzn, y_test_amzn_pred)
+mse_norm = mean_squared_error(y_test_amzn, y_test_amzn_pred)
+```
+
+
+```python
+print("Mean Absolute Error:",normalizer.inverse_transform(np.array([mae_norm]).reshape(-1,1)))
+print("Mean Squared Error:", normalizer.inverse_transform(np.array([mse_norm]).reshape(-1,1)))
+```
+
+
+```python
+plt.gcf().set_size_inches(16, 10, forward=True)
+
+
+real = plt.plot(dates_used_amzn, normalized_amzn[15:, :], label='real')
+trained = plt.plot(dates_train_amzn, y_train_amzn_pred[:, :], label='trained')
+pred = plt.plot(dates_test_amzn, y_test_amzn_pred[:, :], label='predicted')
+
+#plt.legend(['real amzn','real googl','real bll','real qcom','predict amzn','predic googl','predict bll','predict qcom'])
+plt.xlabel('Days being predicted (units are arbitrary)', fontsize=20)
+plt.ylabel('Price (USD)', fontsize=20)
+plt.title('Real and Predicted Close Price on the Test Set', fontsize=30)
+
+plt.show()
+```
 
 As you can see from the graph, this change alone led to better training AND testing performance. When we passed absolute values, a lot of information about the prices increasing wildly was lost. But now, it is visible how the model was able to focus on the pattern of price movement.
 
@@ -156,15 +417,62 @@ As you can see from the graph, this change alone led to better training AND test
 
 So far, you saw how lack of standardizing the inputs can lead to the model losing its ability to learn from the data. We have not touched upon the model specifications and how they contribute to its effectiveness yet. This section shows how having a model that can learn "quickly" with an increased sensitivity to training data might actually be a bad choice.
 
+
+```python
+# Creating Model 2
+input_amzn = Input(shape=(15, 1), name = 'input_amzn')
+x2 = LSTM(200, return_sequences=False, name='LSTM1_amzn')(input_amzn)
+output2 = Dense(1, name='amzn_final')(x2)
+model2 = Model(inputs = input_amzn, outputs = output2)
+adam = Adam(learning_rate=0.009)
+model2.compile(optimizer=adam, loss='mse')
+model2.summary()
+```
+
 In the code sample above, 2 paramters have changed, can you guess what they are?
 
 Answer: The LSTM model has more cells, which means the data would be learned by the model quiet extensively. The second element that has changed is, the learning rate in the optimizer. For this example, we have increased it ten times compared to before.
 
 You'd assume that this makes the model much better and improves all the accuracy scores, enabling us to predict the market more effectively. But, focus on the next graph and see what has happened instead.
 
+
+```python
+ history2 = model2.fit(x=X_train_amzn, y=y_train_amzn, batch_size=32, epochs=40, validation_split=0.2, shuffle=False)
+evaluation2 = model2.evaluate(X_test_amzn,y_test_amzn)
+```
+
+
+```python
+loss = history2.history['loss']
+val_loss = history2.history['val_loss']
+epochs = range(1, len(loss) + 1)
+plt.plot(epochs[15:], loss[15:], 'b', label='Training loss')
+plt.plot(epochs[15:], val_loss[15:], 'r', label='Validation loss')
+plt.title('Training and Validation loss')
+plt.legend()
+plt.show()
+```
+
 ## Validation Results
 
 If you look closely, you'd find that the validation loss has stagnated at a particular level and does not decrease from that point. Low training result indicates that this model has fit the data well, however mediocre validation result might imply that the model fails to generalize its predictions.
+
+
+```python
+plt.gcf().set_size_inches(16, 10, forward=True)
+#currentFig.set_facecolor('white')
+
+real = plt.plot(dates_used_amzn, normalized_amzn[15:, :], label='real')
+trained = plt.plot(dates_train_amzn, y_train_amzn_pred[:, :], label='trained')
+pred = plt.plot(dates_test_amzn, y_test_amzn_pred[:, :], label='predicted')
+
+#plt.legend(['real amzn','real googl','real bll','real qcom','predict amzn','predic googl','predict bll','predict qcom'])
+plt.xlabel('Days being predicted (units are arbitrary)', fontsize=20)
+plt.ylabel('Price (USD)', fontsize=20)
+plt.title('Real and Predicted Close Price on the Test Set', fontsize=30)
+
+plt.show()
+```
 
 ## Overfitting
 In the graph above, the model's predictions in orange seem to trace perfectly with the stock price. Essentially, the model has fit the training data too well, capturing spurious patterns and anomalies that do not generalize to unseen data.
