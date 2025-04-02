@@ -1,5 +1,5 @@
 ---
-title: Notebook 1 - Introduction to Financial Time Series Prediction with LSTMs (test)
+title: Notebook 1 - Introduction to Financial Time Series Prediction with LSTMs
 ---
 
 # Introduction
@@ -85,8 +85,16 @@ dataset_amzn = df_amzn.values
 
 
 ```python
-df_amzn.head()
+df_amzn.tail()
 ```
+
+| Date       |   Open |   High |    Low |   Close |      Volume |   Dividends |   Stock Splits |
+|:-----------|-------:|-------:|-------:|--------:|------------:|------------:|---------------:|
+| 2024-03-28 | 180.17 | 181.7  | 179.26 |  180.38 | 3.80516e+07 |           0 |              0 |
+| 2024-04-01 | 180.79 | 183    | 179.95 |  180.97 | 2.91745e+07 |           0 |              0 |
+| 2024-04-02 | 179.07 | 180.79 | 178.38 |  180.69 | 3.26115e+07 |           0 |              0 |
+| 2024-04-03 | 179.9  | 182.87 | 179.8  |  182.41 | 3.10466e+07 |           0 |              0 |
+| 2024-04-04 | 184    | 185.1  | 180    |  180    | 4.16243e+07 |           0 |              0 |
 
 ## How does a typical ML model work?
 The first step before we dive deep into LSTMs, we need to underestand how a typical machine learning model pipeline works. There are three main elements of a machine learning pipeline:
