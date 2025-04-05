@@ -3,10 +3,14 @@ title: Notebook 1 - Introduction to Financial Time Series Prediction with LSTMs
 ---
 
 # Introduction
-This workbook will help you understand how to create a simple machine learning model to predict stock prices. The learning objectives are:
-1. Data Preprocessing: Understanding why preprocessing data is important and how we can use python to simplify it.
-2. LSTM models: Learning about the architecture and caulculations performed in a LSTM model and how it is suitable for stock market price prediction.
-3. Model Performance: Differentiating when a model is performing as intended and learning about underfitting or overfitting.
+
+This workbook will help you understand how to build a simple machine learning model to predict stock prices. The learning objectives are:
+
+1. **Data Preprocessing**: Understanding why data preprocessing is important and how Python can simplify the process.  
+2. **LSTM Models**: Learning about the architecture and computations in an LSTM model, and why it is suitable for stock market price prediction.  
+3. **Model Performance**: Understanding how to assess a model's performance and differentiate between underfitting and overfitting.
+
+
 
 
 ```python
@@ -23,18 +27,16 @@ from numpy import array
 import math
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow import keras
-from keras.models import Model
+import keras
+from keras import Model
 from keras.layers import Input, Dense, LSTM, GRU, Dropout, concatenate
 from keras.optimizers import Adam
-from keras.backend import square, mean
 from keras.utils import plot_model
 import yfinance as yf
 
-yf.pdr_override()
 
 # Get Current Date
-today = date.today()
+today = date(2024, 4, 5)
 currentDate = today.strftime("%Y-%m-%d")
 
 # Set Info
@@ -46,19 +48,23 @@ import seaborn as sns
 
 ## Setting Up
 
-The code below imports all the necessary libraries from relevant packages. We will be using Yahoo Finance's API to collect stock price data.
+The code below imports all the necessary libraries from relevant packages. We will be using Yahoo Finance’s API to collect stock price data.
 
-We are analyzing 13 years of data from four different companies to make these predictions. You are welcome to experiment with a combination of other companies or by adding the time series for the stock market index.
+We are analyzing 13 years of data from four different companies to make predictions. You are encouraged to experiment by trying other combinations of companies or by adding the time series for a stock market index.
 
-The input data chosen here will determine what our model is trained on. By selecting the type of input data, you are deciding what knowledge your model can capture. Other models have been built using:
-1. Macroeconomic Data: Interest rates, unemployment rates, and GDP changes all influence the stock market. These time series can either be a part of your LSTM model or can be added separately.
-2. Fundamental Indicators: These include metrics such as profit, EBITDA, and book value related to a specific company. A model can approximate how changes in these values translate to changes in stock prices. This approach closely mirrors the real world and is a viable extension to this project.
-3. News and Sentiment Data: Researchers and investors have used commentary by retail investors on open forums like Twitter (now X) and Reddit, or news articles, to perform sentiment analysis and see how that could affect stock prices. Predicting text data with LSTMs can be challenging, as these are primarily designed for time-series data. However, if you can figure out how to perform feature engineering, you might build a model with higher accuracy.
+The input data selected here determines what our model will be trained on. By choosing the type of input data, you’re essentially deciding what kind of knowledge your model will capture. Other models have been built using:
+
+1. **Macroeconomic Data**: Interest rates, unemployment rates, and GDP changes all influence the stock market. These time series can either be part of your LSTM model or included as separate inputs.
+2. **Fundamental Indicators**: Metrics such as profit, EBITDA, and book value specific to a company. A model can learn how changes in these values relate to changes in stock prices. This approach closely mirrors real-world investment strategies and is a valuable extension of this project.
+3. **News and Sentiment Data**: Investors and researchers have used commentary from forums like Twitter (now X), Reddit, or news articles to perform sentiment analysis, examining its impact on stock prices. Predicting from text data with LSTMs is challenging, as LSTMs are primarily designed for time-series data. However, with the right feature engineering, such models can potentially achieve higher accuracy.
+
 
 
 ```python
-# Data AMZN
-stock_amzn = pdr.get_data_yahoo(stockName[0], start_date, end_date)
+# Downloading the data from yfinance
+amzn_ticker = yf.Ticker(stockName[0])
+stock_amzn = amzn_ticker.history(start=start_date, end=end_date)
+stock_amzn.index = stock_amzn.index.strftime('%Y-%m-%d')
 ```
 
 
@@ -97,24 +103,28 @@ df_amzn.tail()
 | 2024-04-04 | 184    | 185.1  | 180    |  180    | 4.16243e+07 |           0 |              0 |
 
 ## How does a typical ML model work?
-The first step before we dive deep into LSTMs, we need to underestand how a typical machine learning model pipeline works. There are three main elements of a machine learning pipeline:
-1. Data Preprocessing and Feature Engineering
-2. Initializing and specifying Model Parameters
-3. Training, testing and cross-validating the model
-Finally, after doing all of that, you can generate Predictions and compare that to real data.
-
-These steps can be further broken down into specific components as we go through the workbook today. You need to focus on the importance of each step in the entire model, and what modelling decisions you end up making intutively by choosing one thing over the other.
-
-# Example 1: Are the numbers too big?
 
 
+Before diving into LSTMs, it is important to understand how a typical machine learning model pipeline functions. There are three main components:
 
-Before we fit our model, we need to preprocess our data. LSTMs take windows of a sequence as inputs. This means they consider a subset of sequential data points at any given time. This approach allows LSTMs to capture temporal relationships within the data. For example, imagine an Excel sheet tracking stock prices over time. Each row represents a day's worth of data. An LSTM might look at a window of 5 rows (days) at a time to predict the price on the 6th day.
+1. **Data Preprocessing and Feature Engineering**  
+2. **Initializing and Specifying Model Parameters**  
+3. **Training, Testing, and Cross-Validating the Model**
 
-In this case, The LSTM looks at a small section of all our stock prices, say 15 days at a time, to guess what the price will be on the 16th day. Then, it moves this window one day forward and repeats the process. This way, it learns from the past to predict the future, by seeing the patterns that have already appeared and we're assuming that is what will happen in the future.
+Finally, predictions are generated and compared to actual data.
 
-It is important to note that in case of univariate data (what we have here), we are solely considering the past prices of a stock to predict its value in the future.
+These steps will be broken down further throughout this workbook. Focus on the importance of each step and the intuitive modeling decisions you make by choosing one method over another.
 
+
+# Example 1: Are the Numbers Too Big?
+
+Before fitting our model, we need to preprocess our data. LSTMs take windows of a sequence as input. This means they consider a subset of sequential data points at any given time, allowing them to capture temporal relationships within the data.
+
+Imagine an Excel sheet tracking stock prices over time, where each row represents one day's data. An LSTM might look at a 5-day window to predict the price on the 6th day.
+
+In our case, the LSTM considers a 15-day window of stock prices to predict the price on the 16th day. Then, the window slides forward by one day, repeating the process. In this way, the model learns from past patterns to make future predictions, assuming that historical patterns will repeat.
+
+Its important to note that with univariate data (as we have here), we are only using past prices of a stock to predict its future value.
 
 
 
@@ -133,20 +143,15 @@ display(data_used_amzn.shape,data_to_predict_amzn.shape, dates_used_amzn.shape)
 
 ### Line by Line Breakdown
 
-1. num_data_amzn = len(dataset_amzn): This line counts how many data points (like days of stock prices) you have.
-2. num_days_used = 15: This sets up the size of your sliding window. Here, it's 15 days.
-3. data_used_amzn = np.array([]): This line creates a new list where each item is a 15-day window of stock prices. It does this for the entire dataset except for the last 15 days.
+1. `num_data_amzn = len(dataset_amzn)`: Counts how many data points (e.g., days of stock prices) are in the dataset.  
+2. `num_days_used = 15`: Defines the size of the sliding window—15 days.  
+3. `data_used_amzn = np.array([])`: Initializes a list to hold 15-day windows of stock prices for processing.
 
+**Setting Up Prediction Data:**
 
-Setting Up Prediction Data:
-
-4. data_to_predict_amzn = np.array(dataset_amzn[num_days_used:, :1]): This takes the stock price for each day after the first 15 days (since you need the first 15 days to make your first prediction).
-
-
-5. dates_used_amzn = stock_amzn.index[num_days_used:num_data_amzn]: This line creates a list of dates corresponding to each 15-day window.
-
-6. display(data_used_amzn.shape, data_to_predict_amzn.shape, dates_used_amzn.shape): Finally, this line shows the size or 'shape' of your data. It's like checking how many rows and columns you have in each list: one for the 15-day windows, one for the days you're predicting, and one for the dates of these windows.
-
+4. `data_to_predict_amzn = np.array(dataset_amzn[num_days_used:, :1])`: Extracts the stock price for each day after the initial 15 days—used for prediction targets.  
+5. `dates_used_amzn = stock_amzn.index[num_days_used:num_data_amzn]`: Creates a list of dates corresponding to each 15-day window.  
+6. `display(data_used_amzn.shape, data_to_predict_amzn.shape, dates_used_amzn.shape)`: Displays the shape (i.e., dimensions) of each dataset—how many rows and columns are in each array.
 
 
 
@@ -186,7 +191,7 @@ display("X_train shape:", X_train_amzn.shape, "X_test shape:", X_test_amzn.shape
 
 In most supervised machine learning models we split the dataset into training and testing sets. The purpose of this division is to evaluate the model’s performance on unseen data, ensuring it can generalize well beyond the specific examples it was trained on.
 
-Normally, the data is randomly split into training and testing sets. However, in time-series data, like financial markets, this approach can be problematic. Financial data is inherently sequential; today's market behavior is often influenced by what happened yesterday or in the past days.
+Normally, data is split randomly. However, this approach doesn’t work well for time-series data, such as financial markets, because the data is sequential. Today’s market behavior is influenced by what happened yesterday or in previous days.
 
 If we randomly split this kind of data, we risk including future data in our training set and past data in our testing set. This setup would lead to a misleading evaluation of the model's performance because the model might get "hints" about the future in its training phase. In reality, these future insights would not be available when making real-world predictions. For instance, if the model is trained on data including next week's stock prices and tested on this week's prices, it could unrealistically appear highly accurate, because it's effectively 'cheating' by using knowledge from the future.
 
@@ -289,19 +294,23 @@ We can see that the training loss is fairly high at approximately 1000 units, wh
 The validation loss is much higher at 6000 units. This is extremely problematic because this implies the model is struggling to apply the information it has learned to the new context. Or, has it even learned anything? You can try answering that question by looking at the next graph.
 
 
+```
+start_pt = len(y_train_amzn)
+end_pt = start_pt + len(y_test_amzn_pred2)
+x_axis_pred = [i for i in range(start_pt, end_pt)]
+```
+
+
 ```python
 # Prediction data test
-plt.gcf().set_size_inches(16, 10, forward=True)
-
-
-real = plt.plot(dates_used_amzn, dataset_amzn[15:, :], label='real')
-trained = plt.plot(dates_train_amzn, y_train_amzn_pred[:, :], label='trained')
-pred = plt.plot(dates_test_amzn, y_test_amzn_pred[:, :], label='predicted')
+plt.gcf().set_size_inches(12, 7)
+plt.plot(dataset_amzn[15:, :], label='real')
+plt.plot(y_train_amzn_pred[:, :], label='trained')
+plt.plot(x_axis_pred, y_test_amzn_pred, label='predicted')
 
 #plt.legend(['real amzn','real googl','real bll','real qcom','predict amzn','predic googl','predict bll','predict qcom'])
-plt.xlabel('Days being predicted (units are arbitrary)', fontsize=20)
-plt.ylabel('Price (USD)', fontsize=20)
-plt.title('Real and Predicted Close Price on the Test Set', fontsize=30)
+plt.ylabel('Price (USD)')
+plt.title('Real vs. Predicted')
 
 plt.show()
 ```
@@ -416,24 +425,19 @@ mse_norm = mean_squared_error(y_test_amzn, y_test_amzn_pred)
 print("Mean Absolute Error:",normalizer.inverse_transform(np.array([mae_norm]).reshape(-1,1)))
 print("Mean Squared Error:", normalizer.inverse_transform(np.array([mse_norm]).reshape(-1,1)))
 ```
-```
-Mean Absolute Error: [[17.86935465]]
-Mean Squared Error: [[14.45601379]]
-```
+
+
+
 
 ```python
-plt.gcf().set_size_inches(16, 10, forward=True)
-
-
-real = plt.plot(dates_used_amzn, normalized_amzn[15:, :], label='real')
-trained = plt.plot(dates_train_amzn, y_train_amzn_pred[:, :], label='trained')
-pred = plt.plot(dates_test_amzn, y_test_amzn_pred[:, :], label='predicted')
-
+# Prediction data test
+plt.plot(normalized_amzn[15:, :], label='real')
+plt.plot(y_train_amzn_pred[:, :], label='trained')
+plt.plot(x_axis_pred, y_test_amzn_pred, label='predicted')
 #plt.legend(['real amzn','real googl','real bll','real qcom','predict amzn','predic googl','predict bll','predict qcom'])
-plt.xlabel('Days being predicted (units are arbitrary)', fontsize=20)
-plt.ylabel('Price (USD)', fontsize=20)
-plt.title('Real and Predicted Close Price on the Test Set', fontsize=30)
-
+plt.ylabel('Price (USD)')
+plt.title('Real vs. Predicted')
+plt.gcf().set_size_inches(12, 5)
 plt.show()
 ```
 ![Model results](../../../assets/nbk1_4.png)
@@ -448,10 +452,12 @@ So far, you saw how lack of standardizing the inputs can lead to the model losin
 ```python
 # Creating Model 2
 input_amzn = Input(shape=(15, 1), name = 'input_amzn')
-x2 = LSTM(200, return_sequences=False, name='LSTM1_amzn')(input_amzn)
+
+x2 = LSTM(300, return_sequences=False, name='LSTM1_amzn')(input_amzn)
+
 output2 = Dense(1, name='amzn_final')(x2)
 model2 = Model(inputs = input_amzn, outputs = output2)
-adam = Adam(learning_rate=0.009)
+adam = Adam(learning_rate=0.005)
 model2.compile(optimizer=adam, loss='mse')
 model2.summary()
 ```
@@ -463,8 +469,8 @@ Answer: The LSTM model has more cells, which means the data would be learned by 
 You'd assume that this makes the model much better and improves all the accuracy scores, enabling us to predict the market more effectively. But, focus on the next graph and see what has happened instead.
 
 
-```python
- history2 = model2.fit(x=X_train_amzn, y=y_train_amzn, batch_size=32, epochs=40, validation_split=0.2, shuffle=False)
+```
+history2 = model2.fit(x=X_train_amzn, y=y_train_amzn, batch_size=32, epochs=40, validation_split=0.2, shuffle=False)
 evaluation2 = model2.evaluate(X_test_amzn,y_test_amzn)
 ```
 
@@ -483,25 +489,34 @@ plt.show()
 
 ## Validation Results
 
-If you look closely, you'd find that the validation loss has stagnated at a particular level and does not decrease from that point. Low training result indicates that this model has fit the data well, however mediocre validation result might imply that the model fails to generalize its predictions.
+If you look closely, you'd find that the validation loss has stagnated at a particular level and does not decrease from that point. This implies that model has reached a stable state and its predictions do not vary as much.
+
+Low training loss indicates that this model has fit the data well, since the output of the model on the data its trained on does not vary when compared to its source.
 
 
 ```python
-plt.gcf().set_size_inches(16, 10, forward=True)
-#currentFig.set_facecolor('white')
-
-real = plt.plot(dates_used_amzn, normalized_amzn[15:, :], label='real')
-trained = plt.plot(dates_train_amzn, y_train_amzn_pred[:, :], label='trained')
-pred = plt.plot(dates_test_amzn, y_test_amzn_pred[:, :], label='predicted')
+# Prediction data test
+plt.plot(normalized_amzn[15:, :], label='real')
+plt.plot(y_train_amzn_pred2[:, :], label='trained')
+plt.plot(x_axis_pred, y_test_amzn_pred2, label='predicted')
 
 #plt.legend(['real amzn','real googl','real bll','real qcom','predict amzn','predic googl','predict bll','predict qcom'])
-plt.xlabel('Days being predicted (units are arbitrary)', fontsize=20)
-plt.ylabel('Price (USD)', fontsize=20)
-plt.title('Real and Predicted Close Price on the Test Set', fontsize=30)
-
+plt.ylabel('Price (USD)')
+plt.title('Real vs. Predicted')
+plt.gcf().set_size_inches(12, 5)
 plt.show()
 ```
 ![Model results](../../../assets/nbk1_6.png)
+
+```python
+plt.plot(x_axis_pred, y_test_amzn_pred2, label='predicted')
+plt.plot(x_axis_pred, normalized_amzn[1866:,0], label='real')
+plt.title('Real vs. Predicted (zoomed in'))
+plt.legend()
+```
+
+![Model results](../../../assets/nbk1_7.png)
+
 
 ## Overfitting
 In the graph above, the model's predictions in orange seem to trace perfectly with the stock price. Essentially, the model has fit the training data too well, capturing spurious patterns and anomalies that do not generalize to unseen data.
@@ -510,8 +525,14 @@ This also makes sense when you reconsider the validation loss graph above. The m
 
 This is problematic because the primary goal of a machine learning model is to make accurate predictions on new, unseen data, not just to perform well on the data it was trained on. Overfitting undermines this goal by making the model less adaptable and more error-prone when exposed to new situations or data sets.
 
+Your model's performance isn't exclusively evaluated by its training accuracy. Be cautious when your model is "too accurate", it is entirely possible that it has overfit to training data and wouldn't perform well in real life.
+
 
 ## Conclusion
-This notebook has introduced you to the basics of machine learning. The first model showed us how it is important to properly rescale the inputs in order to allow the model to capture information from them and generalize. Then, looking at LSTMs architecture and skimming through it would have helped in envisioning what calculation take plce inside a cell. The next two examples helped you see what underfitting and overfitting the data means. It is completely fine if you don't understand it well now. These ideas will get stronger as you go through the next 2 notebooks.
+This notebook has introduced you to the basics of machine learning. The first model showed us how it is important to properly rescale the inputs in order to allow the model to capture information from them and generalize. Then, looking at LSTMs architecture and skimming through it would have helped in envisioning what calculation take plce inside a cell. The next two examples helped you see what underfitting and overfitting the data means.
 
-Your main takeaway should be understanding how a basic machine learning model works and how the following steps are involved: a) data pre-processing, b) Defining the model and fitting it
+It is completely fine if you don't understand everything throughly. These ideas will become clearer as you go through the next 2 notebooks.
+
+## What's Next?
+
+In the next notebook, we will see how we can optimize a model's performance by using multiple stocks as features and what other models apart from LSTMs can be used for time-series prediction. The next notebook also covers how we can write cleaner and more modular code to pre-process the data and train the models.
