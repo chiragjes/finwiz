@@ -1,5 +1,5 @@
 ---
-title: LSTMs 2 - Layers, Vanishing Gradients and Hyperparameters
+title: LSTMs 2 - Layers, Vanishing Gradients and Hyperparameters (new)
 ---
 
 ## Introduction
