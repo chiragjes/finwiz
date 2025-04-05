@@ -194,12 +194,12 @@ To avoid this, we should split time-series data chronologically. Typically, earl
 
 
 
-# Single Layer LSTM model
+## Single Layer LSTM model
 Before we start defining the LSTM model, we need to understand how these models actually process the data. Be sure to read through it a couple of times and understand the different components involved in training.
 
 A LSTM has the ability to let the information flow through it via the cell state, (the line running on the top). The flow of information, addition of new information and removal of irrelevant bits and pieces from the past is controlled by using different types of gates.
 
-## Inputs In An LSTM Cell
+### Inputs In An LSTM Cell
 
 1. X_t: The current input data. This is the information that we have selected for this specific time period.
 2. h_t-1: This cell contains the processed output from the previous cell. It has gone through all the computations we have described below in its previous cell and we would be using it (or atleast some proportion, depends on the sigmoid function),  to decide the next output.
@@ -269,6 +269,7 @@ plt.title('Training and Validation loss')
 plt.legend()
 plt.show()
 ```
+![Model results](../../../assets/nbk1_1.png)
 
 This graph, which shows the training and validation loss is key in evaluating the model's performance.
 Let's begin with understanding what training and validation loss are, and what they represent.
@@ -304,11 +305,16 @@ plt.title('Real and Predicted Close Price on the Test Set', fontsize=30)
 
 plt.show()
 ```
-
+![Model results](../../../assets/nbk1_2.png)
 
 ```python
 print("Mean Absolute Error:", mean_absolute_error(y_test_amzn, y_test_amzn_pred))
 print("Mean Squared Error:", mean_squared_error(y_test_amzn, y_test_amzn_pred))
+```
+
+```
+Mean Absolute Error: 25.00092089922845
+Mean Squared Error: 975.3245557179334
 ```
 
 ### Results
@@ -327,7 +333,7 @@ normalizer = MinMaxScaler(feature_range=(0,1)) # instantiate scaler
 normalized_amzn = normalizer.fit_transform(dataset_amzn) # values between 0,1
 ```
 
-# Example 2: A fixed Model
+## Example 2: A fixed Model
 So, in order to see how this model performs when we rescale the inputs, we perform normalization with min max scaler.
 This is important because it ensures that no single feature dominates the model's learning process due to its scale. Among various methods, the MinMaxScaler is commonly used for normalization.
 
@@ -361,8 +367,16 @@ y_test_amzn = data_to_predict_amzn[train_size_amzn:, :]
 
 display("X_train shape:", X_train_amzn.shape, "X_test shape:", X_test_amzn.shape, "y_train shape:", y_train_amzn.shape, "y_test shape:", y_test_amzn.shape)
 ```
-
-
+```
+X_train shape:
+(1851, 15, 1)
+X_test shape:
+(463, 15, 1)
+y_train shape:
+(1851, 1)
+y_test shape:
+(463, 1)
+```
 ```python
 history = model1.fit(x=X_train_amzn, y=y_train_amzn, batch_size=32, epochs=40, validation_split=0.2)
 evaluation = model1.evaluate(X_test_amzn,y_test_amzn)
@@ -385,6 +399,7 @@ plt.title('Training and Validation loss')
 plt.legend()
 plt.show()
 ```
+![Model results](../../../assets/nbk1_3.png)
 
 In the previous cell, we did not change the specification of the model, or the parameters for fitting it. The only difference was standardizing the inputs with the help of min-max alogorithms. As you can clearly see how the training and validation loss has improved drastically by this change.
 
@@ -401,7 +416,10 @@ mse_norm = mean_squared_error(y_test_amzn, y_test_amzn_pred)
 print("Mean Absolute Error:",normalizer.inverse_transform(np.array([mae_norm]).reshape(-1,1)))
 print("Mean Squared Error:", normalizer.inverse_transform(np.array([mse_norm]).reshape(-1,1)))
 ```
-
+```
+Mean Absolute Error: [[17.86935465]]
+Mean Squared Error: [[14.45601379]]
+```
 
 ```python
 plt.gcf().set_size_inches(16, 10, forward=True)
@@ -418,10 +436,11 @@ plt.title('Real and Predicted Close Price on the Test Set', fontsize=30)
 
 plt.show()
 ```
+![Model results](../../../assets/nbk1_4.png)
 
 As you can see from the graph, this change alone led to better training AND testing performance. When we passed absolute values, a lot of information about the prices increasing wildly was lost. But now, it is visible how the model was able to focus on the pattern of price movement.
 
-# Example 3: Can a model be TOO good?
+## Example 3: Can a model be TOO good?
 
 So far, you saw how lack of standardizing the inputs can lead to the model losing its ability to learn from the data. We have not touched upon the model specifications and how they contribute to its effectiveness yet. This section shows how having a model that can learn "quickly" with an increased sensitivity to training data might actually be a bad choice.
 
@@ -460,6 +479,7 @@ plt.title('Training and Validation loss')
 plt.legend()
 plt.show()
 ```
+![Model results](../../../assets/nbk1_5.png)
 
 ## Validation Results
 
@@ -481,6 +501,7 @@ plt.title('Real and Predicted Close Price on the Test Set', fontsize=30)
 
 plt.show()
 ```
+![Model results](../../../assets/nbk1_6.png)
 
 ## Overfitting
 In the graph above, the model's predictions in orange seem to trace perfectly with the stock price. Essentially, the model has fit the training data too well, capturing spurious patterns and anomalies that do not generalize to unseen data.
