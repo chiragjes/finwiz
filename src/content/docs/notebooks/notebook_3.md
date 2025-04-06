@@ -125,7 +125,6 @@ fairly rare for the market to move by values greater than that. The wide
 range of outliers distorts our view and prevents us from seeing the most
 frequent daily returns.
 
-Source: The Distribution ofStock Returns by RR Officer
 
 ![Histogram showing asset returns 1](../../../assets/hist_nbk3_1.png)
 
@@ -188,10 +187,6 @@ when this is happening, we can employ a confusion matrix which will help
 us judge its effectiveness in correctly predicting each class and
 revealing any biases towards the majority class.
 
-Source:
-<https://www.kdnuggets.com/2022/11/confusion-matrix-precision-recall-explained.html>
-
-
 
 As you can see above, the rows have been labeled according to our
 criteria in the category column. But, this label has been assigned based
@@ -251,7 +246,6 @@ other features are absolute prices. If we were training a model
 exclusively based on change in all features then we could\'ve retained
 it.
 
-<https://builtin.com/machine-learning/data-leakage>
 
 ```python
 # Splitting the data into training and testing sets as before.
@@ -303,7 +297,6 @@ as recursive partitioning.
 This structure not only aids in decision-making but is also simple to
 understand and interpret, akin to a flowchart.
 
-**#analogies**
 
 ![Decision tree viz](../../../assets/decision_tree.png)
 
@@ -370,9 +363,6 @@ without missing out on too many of them. Recall is important for traders
 who aim to capture as many profitable opportunities as possible, even if
 it means risking more false positives.
 
-To
-<https://learn.microsoft.com/en-us/dynamics365/finance/finance-insights/confusion-matrix>
-<https://www.kdnuggets.com/2022/11/confusion-matrix-precision-recall-explained.html>
 
 ```python
 from sklearn.metrics import precision_score, confusion_matrix, ConfusionMatrixDisplay, classification_report
@@ -402,11 +392,6 @@ coin toss (50%). Our model is barely passing this threshold since its
 accuracy is 0.33.
 
 General formula: Better than 1/(number of categories).
-
-Sources:
-<https://starang.medium.com/precision-and-recall-a-brief-intro-38589a21a09>
-
-<https://builtin.com/data-science/precision-and-recall>
 
 ![Decision tree viz](../../../assets/confusion_matrix_1_nbk3.png) 
 
@@ -450,11 +435,6 @@ multiple trees, the benefits in terms of prediction accuracy and model
 stability often outweigh the computational cost, making Random Forest a
 powerful tool in the machine learning arsenal against overfitting and
 for handling high-dimensional data.
-
-Source: <https://builtin.com/data-science/random-forest-algorithm>
-<https://williamkoehrsen.medium.com/random-forest-simple-explanation-377895a60d2d>
-(image),
-<https://www.ibm.com/topics/random-forest#>:\~:text=Random%20forest%20is%20a%20commonly,both%20classification%20and%20regression%20problems.
 
 
 ```python
@@ -518,9 +498,6 @@ understand how the other ones work too.
 ![random forest depth](../../../assets/random_forest_nbk3.png)
 
 Image showing the depth of a tree.
-
-Source:
-<https://www.analyticsvidhya.com/blog/2020/03/beginners-guide-random-forest-hyperparameter-tuning/>
 
 ```python
 
@@ -617,13 +594,6 @@ XGBoost also implements advanced optimization techniques such as
 gradient boosting. This method uses gradients of the loss function to
 minimize error more effectively.
 
-Source:
-<https://medium.com/@techynilesh/xgboost-algorithm-explained-in-less-than-5-minutes-b561dcc1ccee>
-
-
-
-
-
 ```python
 from sklearn.preprocessing import LabelEncoder
 le = LabelEncoder()
@@ -657,7 +627,6 @@ two are unique to XGBoost.
     necessary to differentiate categories won\'t be made either, leading
     to undefitting.
 
-Source: <https://xgboost.readthedocs.io/en/release_0.90/parameter.html>
 
 ```python
 import xgboost as xgb
@@ -777,7 +746,7 @@ next day\'s price. It is possible that despite the intraday market
 structure giving a clear signal, if the market is not performing well in
 general, Microsoft\'s price would take a hit too.
 
-**#levelsofanalysis**
+
 
 
 
@@ -829,3 +798,17 @@ directional movement of a stock market index. This addition aimed to
 incorporate broader market sentiment into our predictions, reflecting
 how external market forces can impact individual stock behavior.
 
+## References
+
+- [Officer R.R. (1972). The distribution of stock returns. Journal of the American Statistical Association 67 (340) 807-812.](https://doi.org/10.1080/01621459.1972.10481297)
+- [Confusion Matrix, Precision, and Recall Explained - KDnuggets](https://www.kdnuggets.com/2022/11/confusion-matrix-precision-recall-explained.html)
+- [Data Leakage in Machine Learning: Detect and Minimize Risk - Built In](https://builtin.com/machine-learning/data-leakage)
+- [Results of Machine Learning Models - Finance | Dynamics 365](https://learn.microsoft.com/en-us/dynamics365/finance/finance-insights/confusion-matrix)
+- [Precision and Recall — A Simple Explanation by Tarang Shah](https://starang.medium.com/precision-and-recall-a-brief-intro-38589a21a09)
+- [Precision and Recall in Classification Models - Built In](https://builtin.com/data-science/precision-and-recall)
+- [Random Forest: A Complete Guide for Machine Learning - Built In](https://builtin.com/data-science/random-forest-algorithm)
+- [Random Forest in Python - Medium](https://medium.com/data-science/random-forest-in-python-24d0893d51c0)
+- [What Is Random Forest? - IBM](https://www.ibm.com/think/topics/random-forest)
+- [A Beginner's Guide to Random Forest Hyperparameter Tuning - Analytics Vidhya](https://www.analyticsvidhya.com/blog/2020/03/beginners-guide-random-forest-hyperparameter-tuning/)
+- [XGBoost Algorithm Explained in Less Than 5 Minutes - Medium](https://medium.com/@techynilesh/xgboost-algorithm-explained-in-less-than-5-minutes-b561dcc1ccee)
+- [XGBoost Parameters — xgboost 0.90 documentation](https://xgboost.readthedocs.io/en/release_0.90/parameter.html)

@@ -115,6 +115,8 @@ plt.figure(figsize=(12, 12))
 sns.heatmap(corr_matrix, annot=True)
 ```
 
+![Plot](../../../assets/nbk2_1.png)
+
 ## Multivariate Models
 In the previous notebook, we were working on forecasting future stock prices with the help of past prices. We did not model anything else and made it exclusively about one stock. We had mentioned how we can use other variables to make our model better. In a regression analysis, one might add more predictors into the model to make it fit better.
 
@@ -135,10 +137,6 @@ In order to build out the model, we would need to pre-process the data to meet t
 
 The first few steps like loading the price data from the yfinance API, filtering the close price and putting it in a dataframe are the same. Now, we will add the series into a different dictionary, with the stock names as keys and prices as list of values.  
 
-
-Side Note: A dictionary is a data structure in python which consists of key:value pairs.
-
-
 ```python
 price_dict = {}
 ```
@@ -156,7 +154,10 @@ for i in range(len(stockName)):
 print(price_dict)
 ```
 
-By using a dictionary, we can clearly see the stock names connected with their prices directly. In a list, we would have only seen the prices.
+:::tip
+A dictionary is a data structure in python which consists of key:value pairs.By using a dictionary, we can clearly see the stock names connected with their prices directly. In a list, we would have only seen the prices.
+:::
+
 
 ### Normalization Of Data
 
@@ -308,11 +309,6 @@ As our model iterates through the data, it would constantly need to adjust its p
 In all the models so far, we have been using Adam Optimizer.
 
 
-Sources: https://ml-cheatsheet.readthedocs.io/en/latest/optimizers.html
-
-
-
-
 ```python
 def model1():
     input_concat = Input(shape=(X_train.shape[1], X_train.shape[2]), name='input_concat')
@@ -351,10 +347,9 @@ This training samples used to perform one update of the model's weights. Smaller
 
 
 
-
+:::note
 To summarize, one epoch involves the entire training dataset passing through the model. This epoch uses broken down chunks of training data for one iterations, and the batch size decides how big one chunk will be.
-
-Sources: https://medium.com/data-science-365/all-you-need-to-know-about-batch-size-epochs-and-training-steps-in-a-neural-network-f592e12cdb0a, https://deeplizard.com/learn/video/U4WB9p6ODjM
+:::
 
 ### Optimizing the Hyperparameters
 Take a look at the graph below to recall underfitting and overfitting from the previous notebook.
@@ -364,8 +359,6 @@ When we increase the batch size, the amount of information that a model has to p
 Similarly, epochs influence the overall performance of the model too. High number of epochs would possibly lead to the data being overfit, since the model would have seen the data multiple times and in the process optimized its weight based on the noise along with learnable features. If the number of epochs is less, the model would not get the opportunity to learn from the data to begin with, causing underfitting.
 
 We also need to adjust other aspects of the model when we make these changes. One example could be, if our batch size is large, our model's learning rate might have to be increased too.
-
-Source: https://medium.com/geekculture/how-does-batch-size-impact-your-model-learning-2dd34d9fb1fa
 
 
 ![picture](https://drive.google.com/uc?export=view&id=1RDeZ7T9vxtT9gQhvvoQpEE232aHoXdKP)
@@ -394,7 +387,7 @@ plt.plot(history.history['val_loss'], label='val_loss')
 plt.legend()
 plt.show()
 ```
-
+![Plot](../../../assets/nbk2_2.png)
 
 ```python
 ## Make Predictions
@@ -403,13 +396,13 @@ y_pred = scaler_dict['MSFT'].inverse_transform(y_pred)
 
 ## Use seaborn to plot everything in this code cell
 import seaborn as sns
-sns.set()
+sns.set_theme()
 plt.figure(figsize=(16, 10))
 plt.plot(scaler_dict['MSFT'].inverse_transform(y_test), label='True')
 plt.plot(y_pred, label='Prediction')
 plt.legend()
 ```
-
+![Plot](../../../assets/nbk2_3.png)
 
 ```python
 ## Make the model predict the training set to see how well it fits the data
@@ -421,6 +414,7 @@ plt.plot(y_pred_train, label='Prediction')
 plt.legend()
 plt.show()
 ```
+![Plot](../../../assets/nbk2_4.png)
 
 ### Adding more Predictors
 In the previous model, we used the close price of 6 stocks to construct our predictions. What will happpen when we take more data about these stocks into account? There are two possibilities that lie ahead of us:
@@ -461,6 +455,7 @@ On the other hand, capturing stock price movement throughout the day involves an
 - High Price: The highest price at which a stock traded during the course of the day. It shows the peak optimism or buying pressure for the day.
 - Low Price: The lowest price at which the stock traded during the day, indicating the point of maximum pessimism or selling pressure.
 - Close Price: As mentioned, this is the last price at which the stock trades before the market closes.
+
 By examining all these aspects, investors can gain insights into the intraday strength or weakness of the stock, which could be triggered by market news, investor sentiment, or external economic events. This detailed breakdown helps traders and investors make more informed decisions, especially for those who engage in intraday or technical trading. It also helps in understanding how external factors or market news impact stock prices within the same trading session.
 
 
@@ -551,15 +546,13 @@ print(evaluation1)
 This model's validation loss metrics are slightly higher than the previous model, suggesting the possibility of overfitting.
 
 
-
-
 ```python
 plt.plot(history1.history['loss'], label='loss')
 plt.plot(history1.history['val_loss'], label='val_loss')
 plt.legend()
 plt.show()
 ```
-
+![Plot](../../../assets/nbk2_5.png)
 
 ```python
 ## Make Predictions
@@ -572,6 +565,7 @@ plt.plot(ohcl_scaler_dict['MSFT_Close'].inverse_transform(ohcl_y_test), label='T
 plt.plot(y_pred2, label='Prediction')
 plt.legend()
 ```
+![Plot](../../../assets/nbk26.png)
 
 ### Results (contd.)
 Actual difference between both the models is apparent in the second graph where we see how far apart its predictions are. The testing predictions of the model were unable to grapple with the sudden price movement in the Microsoft stock. It is possible that adding this much training data would have made the model lose track of this stock.
@@ -594,8 +588,6 @@ Stacking layers can help the model to learn more complex patterns and perform be
 There are two crucial components that your model configuration should have in order to enbale stacking:
 1. return_sequences = True: This is an argument in the LSTM layer. It enables the layer to return the hidden state output for each input time step. Without this, subsequent layers would nt receive the weights captured by the first layer. The last layer has to have this set to False, since it provides the output.
 2. Dropout: It randomly sets a fraction of input units to 0 at each update during training time, which helps to make the model robust by preventing it from relying too heavily on any individual neuron. This is not necessary for a stacked LSTM, however, it is highly recommended otherwise the model might overfit. It adds randomness to the training process, which can affect the learning ability of the model. If there are too many dropout layers or if the fraction is set too high, the model will fail to learn since a larger of weights were set to zero.
-
-Source: https://towardsdatascience.com/from-a-lstm-cell-to-a-multilayer-lstm-network-with-pytorch-2899eb5696f3, https://machinelearningmastery.com/stacked-long-short-term-memory-networks/
 
 ![picture](https://drive.google.com/uc?export=view&id=1Auj0lbf1UM1mOfOZET_gv85aNOkBRqEm)
 
@@ -649,7 +641,7 @@ plt.plot(history2.history['val_loss'], label='val_loss')
 plt.legend()
 plt.show()
 ```
-
+![Plot](../../../assets/nbk2_7.png)
 
 ```python
 ## Make Predictions
@@ -662,7 +654,7 @@ plt.plot(ohcl_scaler_dict['MSFT_Close'].inverse_transform(ohcl_y_test), label='T
 plt.plot(y_pred2, label='Prediction')
 plt.legend()
 ```
-
+![Plot](../../../assets/nbk2_8.png)
 
 ```python
 ## Make the model predict the training set to see how well it fits the data
@@ -674,12 +666,12 @@ plt.plot(y_pred_train2, label='Prediction')
 plt.legend()
 plt.show()
 ```
+![Plot](../../../assets/nbk2_9.png)
 
 The first graph shows the model's performance on the testing set. The predictions have barely captured any of the features of the stock price movement. In the second graph, we can see that even though the model could predict the series until 1250, beyond that it has not been able to capture the variance.
 
 This is problematic because it means the model can not calculate the predicted price beyond a certain point. It seems that even during training, it lost its ability to learn while accommodating the entire dataset. This is not uncommon and might have been caused due to the nature of recurrent models (family of models, LSTM is a part of it). Multiple layers can compound this issue because the weights get calculated several times in one epoch.
 
-Source: https://medium.com/@prudhviraju.srivatsavaya/advantages-and-disadvantages-of-using-multiple-lstm-layers-9c513cd0002c
 
 ## Vanishing Gradient Problem
 When we initialize a neural network, we intend to minimize the loss (the difference between predicted value and the data). A neural network learns by adjusting its weights to minimize the loss. This learning process is facilitated through backpropagation, where the loss is propagated backwards through the network to update the weights. The updates are made based on the gradient of the loss function with respect to each weight. The gradient represents how much a small change in that weight affects the value of the loss function. In simpler terms, it measures the sensitivity of the loss function to changes in that particular weight.
@@ -689,13 +681,6 @@ If the gradient is small (essentially, the loss function is not being sensitive 
 This cascades through the network. Ideally, this change in weight is supposed to get propogated through the network through derivates and multiplication. When the updates to weight are small, products of smaller numbers with other very small numbers gives miniscule results. Come to think of it, in the network above, multiple layers implies these calculations occur more frequently than a typical single layer network.
 
 LSTMs are supposed to mitigate this issue by having the architecture we discussed in the previous notebook. The memory and forget cells regulate what a network remembers and thereby ensuring the weights get updated with new information constantly.
-
-Sources: https://www.baeldung.com/cs/lstm-vanishing-gradient-prevention, https://www.mygreatlearning.com/blog/the-vanishing-gradient-problem/, https://deeplizard.com/learn/video/qO_NLVjD6zE
-
-
-
-
-
 
 
 
@@ -714,8 +699,6 @@ GRUs or Gated Recurrent Units are a type of recurrent neural networks that have 
 2. Reset Gate (r): This gate determines how much of the past information to forget. This can be thought of as a way to make the network consider only the necessary information without being burdened by irrelevant data from the past.
 
 The architecture is simpler than an LSTM, which enables the network to get optimized quickly without using more computational resources.
-
-Source: https://towardsdatascience.com/understanding-gru-networks-2ef37df6c9be, https://d2l.ai/chapter_recurrent-modern/gru.html
 
 
 
@@ -759,7 +742,7 @@ sns.set_theme()
 plt.legend()
 plt.show()
 ```
-
+![Plot](../../../assets/nbk2_10.png)
 
 ```python
 # Make Predictions
@@ -772,6 +755,7 @@ plt.plot(scaler_dict['MSFT'].inverse_transform(y_test), label='True')
 plt.plot(y_pred4, label='Prediction')
 plt.legend()
 ```
+![Plot](../../../assets/nbk2_11.png)
 
 ### Results (contd.)
 In this graph, we can see how this model performed well on the testing set until the inputs became extremely large. The model could not keep track with changes, but it has managed to abstract away some features that capture the directional price movement, leaving the value aside.
@@ -781,7 +765,9 @@ Recurrent neural networks or RNNs were developed when researchers observed how c
 
 When the next input comes along, the model loops through its hidden cell to recall what it had learned previously. It then combines it with the current input. The model updates its hidden cell again and moves ahead through the sequence. The process is called recurrent because it repeats the same task (updating its state and producing an output) for every element of the input sequence. The same parameters (weights and biases) are used at each step, which is efficient and effective for learning from data where order and context matter.
 
+:::caution
 The memory capacity of an RNN is a lot smaller than a LSTM and it cannnot retain information that was fed into it a long time ago. Therefore, it has short-term memory.
+:::
 
 Source: https://www.theaidream.com/post/introduction-to-rnn-and-lstm, https://stanford.edu/~shervine/teaching/cs-230/cheatsheet-recurrent-neural-networks
 
@@ -824,7 +810,7 @@ plt.plot(history5.history['val_loss'], label='val_loss')
 plt.legend()
 plt.show()
 ```
-
+![Plot](../../../assets/nbk2_12.png)
 
 ```python
 # Make Predictions
@@ -837,7 +823,7 @@ plt.plot(scaler_dict['MSFT'].inverse_transform(y_test), label='True')
 plt.plot(y_pred5, label='Prediction')
 plt.legend()
 ```
-
+![Plot](../../../assets/nbk2_13.png)
 
 ```python
 ## Make the model predict the training set to see how well it fits the data
@@ -848,6 +834,8 @@ plt.plot(scaler_dict['MSFT'].inverse_transform(y_train), label='True')
 plt.plot(y_pred_train5, label='Prediction')
 plt.legend()
 ```
+
+![Plot](../../../assets/nbk2_14.png)
 
 ### Results (contd.)
 When the model is made to predict its training set, we see that it is extremely volatile. The model also overstimates the prices by a large margin in the beginning. The predictions mirror the trends, while exaggerating the volitality by a large margin.
@@ -870,8 +858,11 @@ To avoid these situations, we use hyperparameter tuning. There are several algor
 X_train, X_test, y_train, y_test = train_test_split(training_data_x(normalized_stocks['MSFT'], 15), training_data_y(normalized_stocks['MSFT'], 15), test_size=0.2, shuffle=False)
 ```
 
-For this example, we'll use a univariate array akin to the first notebook. We use microsoft's closing price to predict itself. We are not using more complex inputs since the process of tuning hyperparameters takes a long time.
+For this example, we'll use a univariate array akin to the first notebook. We use microsoft's closing price to predict itself. 
 
+:::caution
+We are not using more complex inputs since the process of tuning hyperparameters takes a long time.
+:::
 
 ```python
 #Verifying the shape of the array
@@ -915,10 +906,6 @@ This algorithm is based on the idea of "successive halving". This method was inv
 
 Hyperband takes this one step ahead by performing successive halfing on asmall subset of the data. It experiments with several parameters in the beginning and iterates through them quickly. It evaluates the performance of all these configurations and then selects only the most promising ones to continue to the next round, where they are given more time. This ensures highly unoptimal values get pruned early on and the ones who do have a decent shot at being optimal are given the opportunity to explore the model.
 
-Source: https://neptune.ai/blog/hyperband-and-bohb-understanding-state-of-the-art-hyperparameter-optimization-algorithms
-
-
-
 
 ```python
 import tensorflow as tf
@@ -947,3 +934,18 @@ To increase the model complexity and add even more data, we then delved into mul
 
 To address some of the shortcomings of traditional LSTMs, we introduced Gated Recurrent Units (GRUs), a simpler yet efficient alternative to LSTMs. We also analyzed how RNNs perform on the same dataset. It enabled us to see what short-term memory models are capable of. Finally, we covered hyperparameter tuning, which helps us find optimal settings for our model.
 
+## References 
+- [Optimizers - Machine Learning Cheat Sheet](https://ml-cheatsheet.readthedocs.io/en/latest/optimizers.html)
+- [All You Need to Know About Batch Size, Epochs, and Training Steps in a Neural Network](https://medium.com/data-science-365/all-you-need-to-know-about-batch-size-epochs-and-training-steps-in-a-neural-network-f592e12cdb0a)
+- [How Does Batch Size Impact Your Model Learning?](https://medium.com/geekculture/how-does-batch-size-impact-your-model-learning-2dd34d9fb1fa)
+- [From a LSTM Cell to a Multilayer LSTM Network with PyTorch](https://towardsdatascience.com/from-a-lstm-cell-to-a-multilayer-lstm-network-with-pytorch-2899eb5696f3)
+- [Stacked Long Short-Term Memory Networks](https://machinelearningmastery.com/stacked-long-short-term-memory-networks/)
+- [Advantages and Disadvantages of Using Multiple LSTM Layers](https://medium.com/@prudhviraju.srivatsavaya/advantages-and-disadvantages-of-using-multiple-lstm-layers-9c513cd0002c)
+- [Prevent the Vanishing Gradient Problem with LSTM](https://www.baeldung.com/cs/lstm-vanishing-gradient-prevention)
+- [The Vanishing Gradient Problem](https://www.mygreatlearning.com/blog/the-vanishing-gradient-problem/)
+- [Vanishing & Exploding Gradient Explained | A Problem Resulting from Backpropagation](https://deeplizard.com/learn/video/qO_NLVjD6zE)
+- [Understanding GRU Networks](https://towardsdatascience.com/understanding-gru-networks-2ef37df6c9be)
+- [Gated Recurrent Units (GRU) — Dive into Deep Learning 1.0.3 Documentation](https://d2l.ai/chapter_recurrent-modern/gru.html)
+- [Introduction to RNN and LSTM](https://www.theaidream.com/post/introduction-to-rnn-and-lstm)
+- [Recurrent Neural Networks Cheatsheet](https://stanford.edu/~shervine/teaching/cs-230/cheatsheet-recurrent-neural-networks)
+- [Hyperband and BOHB: Understanding State-of-the-Art Hyperparameter Optimization Algorithms](https://neptune.ai/blog/hyperband-and-bohb-understanding-state-of-the-art-hyperparameter-optimization-algorithms)
